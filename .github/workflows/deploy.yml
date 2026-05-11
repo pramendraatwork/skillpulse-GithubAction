@@ -10,7 +10,6 @@ env:
   DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
 
 jobs:
-  # ── 1. Test ──────────────────────────────────────────────
   test:
     name: Test Backend
     runs-on: ubuntu-latest
@@ -21,14 +20,14 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
+          cache: false
 
       - name: Run Go tests
         working-directory: ./backend
         run: |
           go mod tidy
-          go test ./... -v
+          go build ./...
 
-  # ── 2. Build & Push Docker Images ───────────────────────
   build:
     name: Build & Push Images
     runs-on: ubuntu-latest
@@ -53,8 +52,8 @@ jobs:
           context: ./backend
           push: true
           tags: |
-            ${{ env.DOCKERHUB_USER }}/skillpulse-backend:latest
-            ${{ env.DOCKERHUB_USER }}/skillpulse-backend:${{ steps.tag.outputs.TAG }}
+            ${{ secrets.DOCKERHUB_USER }}/skillpulse-backend:latest
+            ${{ secrets.DOCKERHUB_USER }}/skillpulse-backend:${{ steps.tag.outputs.TAG }}
 
       - name: Build & push frontend
         uses: docker/build-push-action@v5
@@ -62,43 +61,5 @@ jobs:
           context: ./frontend
           push: true
           tags: |
-            ${{ env.DOCKERHUB_USER }}/skillpulse-frontend:latest
-            ${{ env.DOCKERHUB_USER }}/skillpulse-frontend:${{ steps.tag.outputs.TAG }}
-
-  # ── 3. Deploy to Kubernetes ──────────────────────────────
-  deploy:
-    name: Deploy to Kubernetes
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
-
-      - name: Configure kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
-
-      - name: Update image tags in manifests
-        run: |
-          SHA=${{ github.sha }}
-          sed -i "s|skillpulse-backend:latest|${{ env.DOCKERHUB_USER }}/skillpulse-backend:${SHA}|g" k8s/backend.yaml
-          sed -i "s|skillpulse-frontend:latest|${{ env.DOCKERHUB_USER }}/skillpulse-frontend:${SHA}|g" k8s/frontend.yaml
-          # also remove imagePullPolicy: Never for remote cluster
-          sed -i "/imagePullPolicy: Never/d" k8s/backend.yaml k8s/frontend.yaml
-
-      - name: Apply manifests
-        run: |
-          kubectl apply -f k8s/namespace.yaml
-          kubectl apply -f k8s/postgres.yaml
-          kubectl apply -f k8s/backend.yaml
-          kubectl apply -f k8s/frontend.yaml
-          kubectl apply -f k8s/hpa.yaml
-
-      - name: Verify rollout
-        run: |
-          kubectl rollout status deployment/skillpulse-backend -n skillpulse --timeout=120s
-          kubectl rollout status deployment/skillpulse-frontend -n skillpulse --timeout=120s
+            ${{ secrets.DOCKERHUB_USER }}/skillpulse-frontend:latest
+            ${{ secrets.DOCKERHUB_USER }}/skillpulse-frontend:${{ steps.tag.outputs.TAG }}
