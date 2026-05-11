@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skillpulse-backend
+  namespace: skillpulse
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: skillpulse-backend
+  template:
+    metadata:
+      labels:
+        app: skillpulse-backend
+    spec:
+      containers:
+      - name: backend
+        image: skillpulse-skillpulse-backend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_HOST
+          value: postgres
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: POSTGRES_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: POSTGRES_DB
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: skillpulse-backend
+  namespace: skillpulse
+spec:
+  selector:
+    app: skillpulse-backend
+  ports:
+  - port: 8080
+    targetPort: 8080

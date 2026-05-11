@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: skillpulse-db
+    environment:
+      POSTGRES_USER: skillpulse
+      POSTGRES_PASSWORD: skillpulse123
+      POSTGRES_DB: skillpulse
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skillpulse -d skillpulse"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  skillpulse-backend:
+    build: ./backend
+    container_name: skillpulse-backend
+    # No external port — frontend proxies to it internally via nginx
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: skillpulse
+      DB_PASSWORD: skillpulse123
+      DB_NAME: skillpulse
+      PORT: "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  skillpulse-frontend:
+    build: ./frontend
+    container_name: skillpulse-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - skillpulse-backend
+
+volumes:
+  pgdata:

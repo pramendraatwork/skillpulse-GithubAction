@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SkillPulse</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+    header { background: linear-gradient(135deg, #1a1f2e, #2d3748); padding: 2rem; text-align: center; border-bottom: 1px solid #2d3748; }
+    header h1 { font-size: 2.5rem; background: linear-gradient(90deg, #63b3ed, #9f7aea); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    header p { color: #a0aec0; margin-top: 0.5rem; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; }
+    .stats { display: flex; gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 12px; padding: 1.2rem 1.8rem; flex: 1; text-align: center; }
+    .stat-card .number { font-size: 2rem; font-weight: bold; color: #63b3ed; }
+    .stat-card .label { color: #718096; font-size: 0.85rem; margin-top: 0.25rem; }
+    .skills-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.2rem; }
+    .skill-card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 12px; padding: 1.5rem; transition: transform 0.2s, border-color 0.2s; }
+    .skill-card:hover { transform: translateY(-4px); border-color: #63b3ed; }
+    .skill-name { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .skill-category { font-size: 0.8rem; color: #9f7aea; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.8rem; }
+    .skill-level { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.78rem; font-weight: 500; }
+    .level-Beginner    { background: #2d6a4f; color: #95d5b2; }
+    .level-Intermediate { background: #7b4a00; color: #fcd34d; }
+    .level-Advanced    { background: #4a1042; color: #e879f9; }
+    .status { text-align: center; padding: 3rem; color: #718096; }
+    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #48bb78; margin-right: 6px; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    footer { text-align: center; padding: 2rem; color: #4a5568; font-size: 0.85rem; border-top: 1px solid #2d3748; margin-top: 3rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>⚡ SkillPulse</h1>
+    <p>Track and showcase your DevOps skills</p>
+  </header>
+
+  <div class="container">
+    <div class="stats">
+      <div class="stat-card"><div class="number" id="total">—</div><div class="label">Total Skills</div></div>
+      <div class="stat-card"><div class="number" id="advanced">—</div><div class="label">Advanced</div></div>
+      <div class="stat-card"><div class="number" id="categories">—</div><div class="label">Categories</div></div>
+    </div>
+
+    <div id="skills-container" class="skills-grid">
+      <div class="status">Loading skills...</div>
+    </div>
+  </div>
+
+  <footer>
+    <span class="dot"></span> SkillPulse — Three-Tier App | Go + NGINX + PostgreSQL | Deployed on Kubernetes
+  </footer>
+
+  <script>
+    fetch('/api/skills')
+      .then(r => r.json())
+      .then(skills => {
+        const container = document.getElementById('skills-container');
+        const categories = new Set(skills.map(s => s.category));
+        const advanced = skills.filter(s => s.level === 'Advanced').length;
+
+        document.getElementById('total').textContent = skills.length;
+        document.getElementById('advanced').textContent = advanced;
+        document.getElementById('categories').textContent = categories.size;
+
+        container.innerHTML = skills.map(s => `
+          <div class="skill-card">
+            <div class="skill-category">${s.category}</div>
+            <div class="skill-name">${s.name}</div>
+            <span class="skill-level level-${s.level}">${s.level}</span>
+          </div>
+        `).join('');
+      })
+      .catch(() => {
+        document.getElementById('skills-container').innerHTML =
+          '<div class="status">⚠️ Could not reach backend. Is it running?</div>';
+      });
+  </script>
+</body>
+</html>
